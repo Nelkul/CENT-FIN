@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>100 FIN.</title>
+    <style>
+        /* Optimisation et style de base */
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #222; color: white;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden; display: flex; justify-content: center; align-items: center;
+        }
+
+        /* --- MENU PRINCIPAL --- */
+        #menu {
+            display: flex; width: 800px; height: 500px;
+            background-color: #333; box-shadow: 0 0 20px black;
+        }
+        #menu-left {
+            width: 40%; border: 5px solid black; background-color: #1a1a1a;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+            text-align: center;
+        }
+        #menu-left h1 {
+            font-size: 20px; margin-bottom: 50px;
+        }
+        #menu-left h1 span { font-size: 40px; display: block; margin-top: 10px; color: #ffeb3b; }
+        .btn {
+            background-color: #444; color: white; border: 2px solid white;
+            padding: 15px 30px; margin: 10px; cursor: pointer; font-family: inherit; font-size: 18px;
+            width: 80%; transition: 0.2s;
+        }
+        .btn:hover { background-color: white; color: black; }
+        
+        #menu-right { width: 60%; background-color: #2a2a2a; position: relative; }
+        #preview-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #777; }
+
+        /* --- JEU --- */
+        #game-container { display: none; position: relative; }
+        canvas {
+            /* Magie du Pixel Art : On étire un petit canvas sans flou */
+            background-color: #8B5A2B; /* Couleur plancher */
+            width: 800px; height: 600px;
+            image-rendering: pixelated; 
+            box-shadow: 0 0 20px black;
+        }
+
+        /* --- ECRAN DE FIN --- */
+        #ending-screen {
+            display: none; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 400px; height: 200px; background-color: black; border: 3px solid white;
+            justify-content: center; align-items: center; flex-direction: column; text-align: center;
+            z-index: 10;
+        }
+        #ending-screen p {
+            /* Comme demandé : Blanc en Times New Roman */
+            color: white; font-family: 'Times New Roman', Times, serif; font-size: 24px; padding: 20px;
+        }
+        
+        /* --- LISTE DES FINS --- */
+        #ends-list-container {
+            display: none; width: 800px; height: 500px; background-color: #1a1a1a;
+            border: 5px solid black; padding: 20px; overflow-y: auto; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <div id="menu-left">
+            <h1>Je suis chez moi et je doit avoir<br><span>100 FIN.</span></h1>
+            <button class="btn" onclick="startGame()">JOUER</button>
+            <button class="btn" onclick="showEndsList()">LES FINS (<span id="ends-count">0</span>/100)</button>
+        </div>
+        <div id="menu-right">
+            <div id="preview-text">Aperçu de la maison...</div>
+            <canvas id="previewCanvas" width="160" height="120" style="width:100%; height:100%;"></canvas>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="160" height="120"></canvas>
+        
+        <div id="ending-screen">
+            <p id="ending-text">Nom de la fin</p>
+            <button class="btn" style="font-size:14px; padding:5px 10px;" onclick="returnToMenu()">Retour au menu</button>
+        </div>
+    </div>
+
+    <div id="ends-list-container">
+        <h2>Fins débloquées</h2>
+        <ul id="ends-ul"></ul>
+        <button class="btn" onclick="returnToMenuFromList()">Retour</button>
+    </div>
+
+    <script>
+        // --- GESTION DES FINS (Sauvegarde locale) ---
+        let unlockedEnds = JSON.parse(localStorage.getItem('100fins_sauvegarde')) || [];
+        document.getElementById('ends-count').innerText = unlockedEnds.length;
+
+        function unlockEnd(id, name, description) {
+            if (!unlockedEnds.some(e => e.id === id)) {
+                unlockedEnds.push({ id, name, description });
+                localStorage.setItem('100fins_sauvegarde', JSON.stringify(unlockedEnds));
+                document.getElementById('ends-count').innerText = unlockedEnds.length;
+            }
+            
+            // Affichage de la petite fenêtre
+            document.getElementById('ending-text').innerHTML = `<strong>Fin #${id} : ${name}</strong><br><br><span style="font-size:18px">${description}</span>`;
+            document.getElementById('ending-screen').style.display = 'flex';
+            gameState = 'ENDED';
+        }
+
+        // --- MOTEUR DE JEU ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewCtx = previewCanvas.getContext('2d');
+        
+        let gameState = 'MENU'; // MENU, PLAYING, ENDED
+        let keys = {};
+
+        // Le joueur
+        let player = { x: 80, y: 60, size: 8, color: '#4CAF50', speed: 1.5 };
+
+        // Objets interactifs de la maison
+        const objects = [
+            { id: 'tv', x: 20, y: 10, w: 30, h: 10, color: '#111', interact: () => unlockEnd(1, "Téléphage", "Tu as regardé la télé jusqu'à ce que tes yeux fondent.") },
+            { id: 'canape', x: 20, y: 30, w: 30, h: 15, color: '#8B0000', interact: () => unlockEnd(2, "Grosse Sieste", "Tu t'es endormi sur le canapé et tu n'as jamais voulu te réveiller.") },
+            { id: 'porte', x: 140, y: 50, w: 10, h: 20, color: '#5C4033', interact: () => unlockEnd(3, "L'Extérieur ?", "Tu as essayé de sortir... mais le monde extérieur fait trop peur.") }
+        ];
+
+        // Contrôles
+        window.addEventListener('keydown', e => { keys[e.code] = true; });
+        window.addEventListener('keyup', e => { 
+            keys[e.code] = false; 
+            // Interaction avec la touche ESPACE
+            if(e.code === 'Space' && gameState === 'PLAYING') {
+                checkInteraction();
+            }
+        });
+
+        function checkInteraction() {
+            // Vérifie si le joueur est proche d'un objet
+            const pCenter = { x: player.x + player.size/2, y: player.y + player.size/2 };
+            for(let obj of objects) {
+                // Zone d'interaction (un peu plus grande que l'objet)
+                if (pCenter.x > obj.x - 10 && pCenter.x < obj.x + obj.w + 10 &&
+                    pCenter.y > obj.y - 10 && pCenter.y < obj.y + obj.h + 10) {
+                    obj.interact();
+                    break;
+                }
+            }
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            // Déplacement
+            if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 0) player.y -= player.speed;
+            if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - player.size) player.y += player.speed;
+            if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 0) player.x -= player.speed;
+            if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.size) player.x += player.speed;
+        }
+
+        function draw(context) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dessiner les objets
+            for(let obj of objects) {
+                context.fillStyle = obj.color;
+                context.fillRect(obj.x, obj.y, obj.w, obj.h);
+            }
+
+            // Dessiner le joueur
+            context.fillStyle = player.color;
+            context.fillRect(player.x, player.y, player.size, player.size);
+
+            // Indication d'interaction (petit '?' au dessus du joueur)
+            if (gameState === 'PLAYING') {
+                const pCenter = { x: player.x + player.size/2, y: player.y + player.size/2 };
+                for(let obj of objects) {
+                    if (pCenter.x > obj.x - 10 && pCenter.x < obj.x + obj.w + 10 &&
+                        pCenter.y > obj.y - 10 && pCenter.y < obj.y + obj.h + 10) {
+                        context.fillStyle = 'white';
+                        context.font = '10px Arial';
+                        context.fillText('[ESPACE]', player.x - 10, player.y - 5);
+                    }
+                }
+            }
+        }
+
+        function loop() {
+            update();
+            if (gameState === 'PLAYING') {
+                draw(ctx);
+            } else if (gameState === 'MENU') {
+                // Dessine un petit aperçu inactif sur le menu
+                draw(previewCtx);
+            }
+            requestAnimationFrame(loop);
+        }
+
+        // --- NAVIGATION UI ---
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            player.x = 80; player.y = 60; // Reset position
+            gameState = 'PLAYING';
+        }
+
+        function returnToMenu() {
+            document.getElementById('ending-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            gameState = 'MENU';
+        }
+
+        function showEndsList() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('ends-list-container').style.display = 'block';
+            const ul = document.getElementById('ends-ul');
+            ul.innerHTML = '';
+            
+            // Génère la liste des 100 fins (masque celles non trouvées)
+            for (let i = 1; i <= 100; i++) {
+                let li = document.createElement('li');
+                let found = unlockedEnds.find(e => e.id === i);
+                if (found) {
+                    li.innerHTML = `<strong style="color:#4CAF50">Fin #${i} : ${found.name}</strong> - ${found.description}`;
+                } else {
+                    li.innerHTML = `<span style="color:#555">Fin #${i} : ???</span>`;
+                }
+                ul.appendChild(li);
+            }
+        }
+
+        function returnToMenuFromList() {
+            document.getElementById('ends-list-container').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+        }
+
+        // Lancer la boucle au démarrage
+        loop();
+    </script>
+</body>
+</html>
