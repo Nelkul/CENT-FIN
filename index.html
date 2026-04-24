@@ -3,250 +3,608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>100 FIN.</title>
+    <title>Je suis chez moi et je doit avoir 100 FIN.</title>
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: #222; color: white;
+            background-color: #1a1a1a; color: white;
             font-family: 'Courier New', Courier, monospace;
-            overflow: hidden; touch-action: none; /* Empêche le zoom accidentel sur mobile */
+            overflow: hidden; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
-        /* --- RESPONSIVE CONTAINER --- */
-        #main-wrapper {
+        /* --- CONTAINER PRINCIPAL --- */
+        #game-wrapper {
             display: flex; justify-content: center; align-items: center;
             width: 100vw; height: 100vh;
         }
 
-        /* --- MENU --- */
+        /* --- MENU PRINCIPAL (Deux Colonnes) --- */
         #menu {
-            display: flex; width: 90%; max-width: 800px; height: 80%;
-            background-color: #333; box-shadow: 0 0 20px black;
+            display: flex; width: 90%; max-width: 900px; height: 80%;
+            background-color: #333; box-shadow: 0 0 30px black;
+            border: 4px solid #111;
         }
         #menu-left {
-            width: 45%; border: 5px solid black; background-color: #1a1a1a;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px;
-            text-align: center;
+            width: 45%; border-right: 4px solid #111; background-color: #111;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+            text-align: center; box-sizing: border-box;
         }
-        #menu-left h1 { font-size: clamp(14px, 4vw, 20px); }
-        #menu-left h1 span { font-size: clamp(24px, 8vw, 40px); color: #ffeb3b; display: block; }
+        #menu-left h1 { font-size: clamp(16px, 5vw, 24px); line-height: 1.2; margin-bottom: 30px;}
+        #menu-left h1 span { font-size: clamp(30px, 10vw, 50px); color: #ffeb3b; display: block; margin-top: 10px; font-weight: bold;}
         
         .btn {
-            background-color: #444; color: white; border: 2px solid white;
-            padding: 10px 20px; margin: 5px; cursor: pointer; font-family: inherit; font-size: 16px;
-            width: 90%;
+            background-color: #444; color: white; border: 3px solid white;
+            padding: 12px 24px; margin: 8px; cursor: pointer; font-family: inherit; font-size: 18px;
+            width: 90%; text-transform: uppercase;
         }
+        .btn:hover { background-color: white; color: black; }
 
-        #menu-right { width: 55%; background-color: #2a2a2a; position: relative; overflow: hidden; }
-
-        /* --- JEU --- */
-        #game-container { display: none; position: relative; width: 100%; height: 100%; }
-        canvas {
-            background-color: #8B5A2B;
-            width: 100%; height: 100%; object-fit: contain; /* S'adapte à l'écran sans déformer */
-            image-rendering: pixelated;
-        }
-
-        /* --- BOUTONS MOBILES --- */
-        .mobile-controls {
-            display: none; /* Caché par défaut, activé via JS si tactile */
-            position: absolute; bottom: 20px; width: 100%;
-            justify-content: space-between; padding: 0 20px; box-sizing: border-box;
-            pointer-events: none; /* Pour ne pas bloquer le clic sur le canvas */
-        }
-        .d-pad { display: grid; grid-template-columns: 50px 50px 50px; pointer-events: auto; }
-        .m-btn {
-            width: 50px; height: 50px; background: rgba(255,255,255,0.2); 
-            border: 2px solid white; color: white; border-radius: 10px;
+        #menu-right { 
+            width: 55%; background-color: #2a2a2a; position: relative; overflow: hidden; 
             display: flex; justify-content: center; align-items: center;
-            user-select: none; -webkit-tap-highlight-color: transparent;
         }
-        .action-btn {
-            width: 80px; height: 80px; border-radius: 40px; background: rgba(255, 235, 59, 0.3);
-            pointer-events: auto; font-weight: bold;
+        #preview-text { position: absolute; color: #555; font-size: 12px;}
+
+        /* --- ZONE DE JEU (Side-scroller) --- */
+        #game-container { display: none; position: relative; width: 100%; height: 100%; overflow: hidden; }
+        canvas {
+            display: block; width: 100%; height: 100%; object-fit: contain; /* Garde le ratio */
+            image-rendering: pixelated; 
         }
 
-        /* --- FIN --- */
+        /* --- CONTRÔLES TACTILES --- */
+        #touch-controls {
+            display: none; /* Activé via JS si tactile */
+            position: absolute; bottom: 30px; width: 100%;
+            justify-content: space-between; padding: 0 30px; box-sizing: border-box;
+            pointer-events: none; z-index: 10;
+        }
+        .touch-btn {
+            width: 70px; height: 70px; background: rgba(255,255,255,0.2); 
+            border: 3px solid white; color: white; border-radius: 15px;
+            display: flex; justify-content: center; align-items: center; font-size: 24px;
+            pointer-events: auto; -webkit-tap-highlight-color: transparent;
+        }
+        .touch-btn-action { width: 120px; border-radius: 35px; background: rgba(255, 235, 59, 0.3); font-weight: bold;}
+
+        /* --- FENÊTRE DE JALON (FIN #X) --- */
         #ending-screen {
             display: none; position: absolute;
             top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; max-width: 400px; background-color: black; border: 3px solid white;
+            width: 85%; max-width: 450px; background-color: black; border: 4px solid white;
             flex-direction: column; text-align: center; z-index: 100;
         }
-        #ending-text { color: white; font-family: 'Times New Roman', serif; font-size: 20px; padding: 20px; }
+        #ending-text { color: white; font-family: 'Times New Roman', serif; font-size: clamp(18px, 6vw, 22px); padding: 30px; line-height: 1.4;}
+        #ending-text strong { color: #ffeb3b; display: block; margin-bottom: 15px; font-size: 1.2em;}
+        #ending-screen .btn { width: 60%; font-size: 14px; padding: 8px;}
 
-        /* --- LISTE --- */
-        #ends-list-container {
-            display: none; width: 90%; height: 90%; background-color: #1a1a1a;
-            border: 5px solid black; padding: 20px; overflow-y: auto; box-sizing: border-box;
+        /* --- PANNEAU DES JALONS DE FIN (Liste) --- */
+        #milestones-panel {
+            display: none; width: 90%; height: 90%; background-color: #111;
+            border: 4px solid #fff; padding: 20px; overflow-y: auto; box-sizing: border-box;
         }
+        #milestones-panel h2 { text-align: center; color: #ffeb3b;}
+        #milestones-ul { list-style: none; padding: 0;}
+        #milestones-ul li { padding: 10px; border-bottom: 1px solid #333; font-size: 14px;}
+        #milestones-ul li strong { color: #4CAF50;}
+        #milestones-ul li.locked { color: #555;}
 
+        /* --- RESPONSIVE MOBILE (Portrait) --- */
         @media (max-width: 600px) {
-            #menu { flex-direction: column; }
+            #menu { flex-direction: column; width: 95%; }
             #menu-left, #menu-right { width: 100%; height: 50%; }
-            .mobile-controls { display: flex; }
+            #menu-left { border-right: none; border-bottom: 4px solid #111; }
         }
     </style>
 </head>
 <body>
 
-    <div id="main-wrapper">
+    <div id="game-wrapper">
         <div id="menu">
             <div id="menu-left">
                 <h1>Je suis chez moi et je doit avoir<br><span>100 FIN.</span></h1>
                 <button class="btn" onclick="startGame()">JOUER</button>
-                <button class="btn" onclick="showEndsList()">LES FINS (<span id="ends-count">0</span>/100)</button>
+                <button class="btn" onclick="showMilestones()">LES FINS (<span id="ends-count">0</span>/100)</button>
             </div>
             <div id="menu-right">
-                <canvas id="previewCanvas" width="160" height="120" style="width:100%; height:100%;"></canvas>
+                <span id="preview-text">Aperçu side-scroller...</span>
+                <canvas id="previewCanvas" width="320" height="180" style="width:100%; height:100%;"></canvas>
             </div>
         </div>
 
         <div id="game-container">
-            <canvas id="gameCanvas" width="160" height="120"></canvas>
+            <canvas id="gameCanvas" width="320" height="180"></canvas>
             
-            <div class="mobile-controls" id="touchUI">
-                <div class="d-pad">
-                    <div></div><div class="m-btn" ontouchstart="handleTouch('Up', true)" ontouchend="handleTouch('Up', false)">↑</div><div></div>
-                    <div class="m-btn" ontouchstart="handleTouch('Left', true)" ontouchend="handleTouch('Left', false)">←</div><div></div><div class="m-btn" ontouchstart="handleTouch('Right', true)" ontouchend="handleTouch('Right', false)">→</div>
-                    <div></div><div class="m-btn" ontouchstart="handleTouch('Down', true)" ontouchend="handleTouch('Down', false)">↓</div><div></div>
+            <div id="touch-controls">
+                <div style="display:flex; gap: 20px;">
+                    <div class="touch-btn" ontouchstart="handleTouch('Left', true)" ontouchend="handleTouch('Left', false)">←</div>
+                    <div class="touch-btn" ontouchstart="handleTouch('Right', true)" ontouchend="handleTouch('Right', false)">→</div>
                 </div>
-                <div class="m-btn action-btn" onclick="checkInteraction()">ACTION</div>
+                <div class="touch-btn touch-btn-action" ontouchstart="handleTouch('Action', true)" ontouchend="handleTouch('Action', false)">ACTION</div>
             </div>
 
             <div id="ending-screen">
                 <p id="ending-text">Nom de la fin</p>
-                <button class="btn" onclick="returnToMenu()">Retour au menu</button>
+                <button class="btn" onclick="closeMilestonePopUp()">Continuer</button>
             </div>
         </div>
 
-        <div id="ends-list-container">
-            <h2>Fins débloquées</h2>
-            <ul id="ends-ul"></ul>
-            <button class="btn" onclick="returnToMenuFromList()">Retour</button>
+        <div id="milestones-panel">
+            <h2>Jalons de Fin débloqués</h2>
+            <ul id="milestones-ul"></ul>
+            <button class="btn" style="width: 200px; display: block; margin: 20px auto;" onclick="returnToMenuFromList()">Retour</button>
         </div>
     </div>
 
     <script>
-        let unlockedEnds = JSON.parse(localStorage.getItem('100fins_sauvegarde')) || [];
+        // --- DONNÉES DU JEU ---
+        // Liste complète des 100 fins séquentielles (comme des jalons)
+        const finMilestonesData = [
+            // Arc 1 : L'Ennui et la Télévision (1-10)
+            { id: 1, name: "Le Spectateur Perdu", desc: "Vous fixez l'écran noir de la télé. L'univers s'assombrit un peu." },
+            { id: 2, name: "Le Grand Zap", desc: "Vous changez de chaîne 50 fois. La réalité commence à vibrer." },
+            { id: 3, name: "Le Syndrome du Canapé", desc: "Vous restez assis 2 heures. Vous sentez que vous fusionnez avec le tissu." },
+            { id: 4, name: "La Main Télécommandée", desc: "Votre main se ferme en une pince de télécommande." },
+            { id: 5, name: "Le Canal de la Folie", desc: "Vous trouvez la chaîne 666. Des voix murmurent votre nom." },
+            { id: 6, name: "L'œil de la Télé", desc: "Un œil géant vous regarde depuis l'écran." },
+            { id: 7, name: "La Danse Statistique", desc: "La télé projette une neige de statistiques sur votre vie." },
+            { id: 8, name: "Le Télécynique", desc: "Vous critiquez chaque émission. Vous développez un ulcère de l'opinion." },
+            { id: 9, name: "Le Syndrome du Critique d'Art", desc: "Vous commencez à donner des notes à la disposition de votre propre maison." },
+            { id: 10, name: "L'Hypnose Médiatique", desc: "Vous êtes aspiré par l'écran. Vous êtes un personnage de sitcom maintenant." },
+            
+            // Arc 2 : La Nourriture et la Cuisine (11-20)
+            { id: 11, name: "Le Goûter Éternel", desc: "Vous mangez 10 biscuits. Vous n'avez plus jamais faim." },
+            { id: 12, name: "La Pâte Molle", desc: "Vous faites une crêpe. Elle a votre visage et se met à pleurer." },
+            { id: 13, name: "L'Amour du Frigo", desc: "Vous parlez pendant une heure à la porte du frigo. Il vous répond avec un bruit de moteur compatissant." },
+            { id: 14, name: "La Grosse Brûlure", desc: "Vous oubliez un œuf sur le plat. La maison se remplit de fumée de cauchemar." },
+            { id: 15, name: "L'Ulcère Culinaire", desc: "Vous mangez une conserve périmée de 1999. Votre ventre devient une radio." },
+            { id: 16, name: "Le Chef-d'œuvre de Reste", desc: "Vous mixez des restes de lasagnes et de sorbet. C'est délicieux, mais terrifiant." },
+            { id: 17, name: "Le Syndrome de la Mijoteuse", desc: "Vous mettez tout ce que vous possédez dans une cocotte-minute. Vous obtenez un ragoût de souvenirs." },
+            { id: 18, name: "La Main de Beurre", desc: "Votre main devient un bloc de beurre salé." },
+            { id: 19, name: "La Prophétie du Toast", desc: "Un toast avec le mot \"FIN\" écrit en confiture sort du grille-pain." },
+            { id: 20, name: "L'Intoxication à la Nostalgie", desc: "Vous mangez une pomme de votre enfance. Vous rajeunissez de 10 ans, mais vous êtes toujours seul chez vous." },
+            
+            // Arc 3 : Le Sommeil et le Lit (21-30)
+            { id: 21, name: "La Grosse Sieste de 10 Minutes", desc: "Elle dure 10 ans. Vous vous réveillez avec une barbe d'un mètre." },
+            { id: 22, name: "Le Rêve Lucide du Ménage", desc: "Vous rêvez que vous rangez votre maison. Vous vous réveillez, tout est propre, mais vous avez une amnésie partielle." },
+            { id: 23, name: "La Fusion Couette-Matelas", desc: "Vous devenez une entité textile. Votre lit est votre royaume." },
+            { id: 24, name: "Le Ronfleur Harmonique", desc: "Votre ronflement compose une symphonie complexe." },
+            { id: 25, name: "L'Insomnie de l'Espèce", desc: "Vous ne pouvez plus dormir. Vous devenez le gardien nocturne de la planète." },
+            { id: 26, name: "Le Cauchemar du Pantalon", desc: "Vous rêvez que vous n'avez pas de pantalon devant votre télé. La télé se moque de vous." },
+            { id: 27, name: "Le Somnambule Ninja", desc: "Vous rangez toute la maison en dormant, mais vous vous blessez au pied en tombant d'une étagère." },
+            { id: 28, name: "La Chute du Lit Infinie", desc: "Vous tombez du lit et atterrissez dans un univers parallèle de mousse à mémoire de forme." },
+            { id: 29, name: "L'Odyssée du Pli de Couette", desc: "Vous essayez de trouver le sens d'un pli de couette pendant des heures. Vous y trouvez une micro-civilisation." },
+            { id: 30, name: "Le Murmure du Matelas", desc: "Votre matelas vous confie ses secrets. Il a entendu beaucoup de choses." },
+            
+            // Arc 4 : Le Petit Animal et le Jardin (31-40)
+            { id: 31, name: "Le Maître des Hamsters", desc: "Vous parlez 1 heure à votre hamster. Il commence à vous donner des conseils géopolitiques." },
+            { id: 32, name: "La Révolte des PlantesVertes", desc: "Vous donnez trop d'eau à votre plante. Elle se met à marcher et à vous demander des loyers." },
+            { id: 33, name: "L'Arbre de la Patience", desc: "Vous plantez un arbre dans une tasse à café. Il pousse de 1 millimètre. Vous êtes fier." },
+            { id: 34, name: "La Grosse Conversation avec une Mouche", desc: "La mouche est d'accord sur le fait que la télé est stupide." },
+            { id: 35, name: "Le Syndrome du Gardien de Zoo", desc: "Vous commencez à donner des noms à chaque poussière de la maison." },
+            { id: 36, name: "L'Amour d'un Poisson Rouge", desc: "Vous fixez votre poisson pendant 2 heures. Vous partagez une profonde tristesse silencieuse." },
+            { id: 37, name: "La Grosse Poussière de Compagnon", desc: "Vous donnez un nom à une boule de poussière géante et lui donnez des miettes de biscuit." },
+            { id: 38, name: "La Chasse aux Puces Fantômes", desc: "Vous traquez des créatures invisibles dans le tapis." },
+            { id: 39, name: "Le Jardinier de l'Impossible", desc: "Vous essayez de cultiver des sentiments sur une étagère." },
+            { id: 40, name: "Le Phare du Solitaire", desc: "Votre maison devient un phare au milieu d'un océan de néant. Votre hamster est le gardien." },
+            
+            // Arc 5 : La Lecture et la Bibliothèque (41-50)
+            { id: 41, name: "Le Syndrome du Bibliophile", desc: "Vous essayez de lire 100 pages. Vous vous endormez à la page 101." },
+            { id: 42, name: "La Grosse Poésie de l'Ennui", desc: "Vous écrivez un poème de 100 vers sur votre chaussette gauche." },
+            { id: 43, name: "Le Mythe de la Chasse d'Eau", desc: "Vous trouvez un vieux livre sur l'histoire de la plomberie et vous le trouvez passionnant." },
+            { id: 44, name: "Le Poids de la Culture", desc: "Une pile de livres vous tombe dessus. Vous êtes écrasé sous la connaissance." },
+            { id: 45, name: "L'Amour d'une Dédicace", desc: "Vous tombez amoureux de la dédicace d'un auteur décédé il y a 50 ans." },
+            { id: 46, name: "Le Code de la Trousse à Pharmacie", desc: "Vous lisez tous les notices de médicaments. Vous développez des maladies imaginaires." },
+            { id: 47, name: "Le Syndrome de l'Écrivain sans Main", desc: "Vous voulez écrire votre biographie, mais vos mains se sont transformées en pantoufles." },
+            { id: 48, name: "La Chanson d'un Vieux Vinyle", desc: "Un disque rayé vous raconte sa vie en 100 couplets de \"crac\"." },
+            { id: 49, name: "Le Lecteur de la Matrice", desc: "Vous lisez le code de votre propre jeu pendant que vous y jouez." },
+            { id: 50, name: "La Grande Bibliothèque de Poussière", desc: "Votre maison se transforme en une archive infinie de papiers et de souvenirs." },
+            
+            // Arc 6 : La Salle de Bain et l'Hygiène (51-60)
+            { id: 51, name: "La Grosse Douche Froide", desc: "Elle vous paralyse. Vous devenez une statue de glace chez vous." },
+            { id: 52, name: "L'Amour du Miroir", desc: "Vous parlez pendant une heure à votre reflet. Il est d'accord avec vous : vous êtes beau." },
+            { id: 53, name: "La Grosse Goutte d'Eau Fatale", desc: "Le bruit d'un robinet qui goutte vous rend fou." },
+            { id: 54, name: "Le Syndrome de la Salle de Bain Spa", desc: "Vous passez 24 heures dans la baignoire. Votre peau devient une éponge." },
+            { id: 55, name: "La Grosse Chasse d'Eau qui Aspire", desc: "Vous jetez votre passé dans les toilettes. Vous êtes un homme nouveau." },
+            { id: 56, name: "L'Amour d'une Savonnette", desc: "Vous parlez pendant une heure à une vieille savonnette. Elle vous confie ses rêves d'océan." },
+            { id: 57, name: "La Grosse Mousse qui Étouffe", desc: "Vous mettez trop de gel douche. La mousse remplit la maison et vous capture." },
+            { id: 58, name: "Le Syndrome de l'Arbre à Cheveux", desc: "Vous vous brossez 100 fois. Vos cheveux deviennent une forêt impénétrable." },
+            { id: 59, name: "La Grande Odyssée du Dentifrice", desc: "Vous essayez de trouver le sens de la vie dans la pâte de dentifrice." },
+            { id: 60, name: "Le Maître de l'Humidité", desc: "Votre maison devient une forêt tropicale. Vos mains sont des feuilles de palmier." },
+            
+            // Arc 7 : Les Appareils Électriques (61-70)
+            { id: 61, name: "Le Maître des Micro-Ondes", desc: "Vous mettez une canette de soda dans le micro-ondes. L'explosion compose une mélodie complexe." },
+            { id: 62, name: "Le Grille-Pain de la Rédemption", desc: "Vous pardonnez à votre grille-pain d'avoir brûlé votre toast. Il pleure des miettes." },
+            { id: 63, name: "La Grosse Batterie qui Explose", desc: "Vous rechargez votre téléphone pendant 24 heures. Il devient une petite étoile." },
+            { id: 64, name: "Le Syndrome de l'aspirateur qui Aspire Tout", desc: "L'aspirateur aspire le canapé, la télé et le hamster." },
+            { id: 65, name: "La Grosse Conversation avec une Prise Électrique", desc: "La prise vous explique le sens du courant alternatif de la vie." },
+            { id: 66, name: "L'Amour d'une Veilleuse", desc: "Vous tombez amoureux d'une petite veilleuse qui change de couleur." },
+            { id: 67, name: "Le Syndrome du Mixeur de Sentiments", desc: "Vous mettez vos souvenirs et vos regrets dans le mixeur." },
+            { id: 68, name: "La Grosse Climatisation de la Melancolie", desc: "La clim souffle une brise de tristesse sur votre vie." },
+            { id: 69, name: "Le Maître des Sonnettes", desc: "Vous développez une obsession pour les sonnettes de portes. Vous composez une symphonie." },
+            { id: 70, name: "La Grande Fusion Électrique", desc: "Vous fusionnez avec le réseau électrique de votre maison. Vous êtes la lumière." },
+            
+            // Arc 8 : Les Fenêtres et le Monde Extérieur (71-80)
+            { id: 71, name: "Le Maître des Fenêtres", desc: "Vous fixez la fenêtre pendant 2 heures. Vous sentez que vous devenez transparent." },
+            { id: 72, name: "L'Amour d'un PiétonInconnu", desc: "Vous tombez amoureux d'un piéton que vous ne verrez plus jamais." },
+            { id: 73, name: "La Grosse Goutte de Pluie Fatale", desc: "Vous nommez chaque goutte de pluie. Vous développez un sentiment pour la goutte #100." },
+            { id: 74, name: "Le Syndrome de l'Oiseau qui Se Cogne", desc: "Un oiseau se cogne à votre fenêtre. Vous culpabilisez pendant 10 ans." },
+            { id: 75, name: "La Grosse Conversation avec un Poteau Électrique", desc: "Le poteau est d'accord pour dire que le monde est trop bruyant." },
+            { id: 76, name: "L'Amour d'un Nuage qui Ressemble à un Chien", desc: "Vous pleurez en voyant le nuage se dissiper." },
+            { id: 77, name: "Le Syndrome de l'Homme Invisible", desc: "Vous essayez de sortir de chez vous, mais personne ne vous voit." },
+            { id: 78, name: "La Grande Chute de la Fenêtre", desc: "Vous tombez de votre fenêtre et atterrissez dans un univers parallèle de mousse à mémoire de forme." },
+            { id: 79, name: "L'Odyssée du Pli de Fenêtre", desc: "Vous essayez de trouver le sens d'un pli de rideau pendant des heures." },
+            { id: 80, name: "Le Phare de la Fenêtre", desc: "Votre fenêtre devient un phare au milieu d'un océan de néant." },
+            
+            // Arc 9 : Les Placards et les Objets Cachés (81-90)
+            { id: 81, name: "Le Maître des Chaussettes Orphelines", desc: "Vous trouvez un placard rempli de chaussettes gauches orphelines. Vous les adoptez." },
+            { id: 82, name: "L'Amour d'une Vieille Lettre de Rupture", desc: "Vous pleurez en la lisant, même si vous l'avez écrite vous-même." },
+            { id: 83, name: "La Grosse Poussière Fatale du Placard", desc: "Une boule de poussière géante vous capture et vous fait écouter de la vieille musique." },
+            { id: 84, name: "Le Syndrome du Coffre-Fort qui Cache Rien", desc: "Vous ouvrez un vieux coffre-fort et y trouvez un post-it avec écrit \"FIN\"." },
+            { id: 85, name: "La Grosse Conversation avec une Vieille Boîte à Chaussures", desc: "La boîte est d'accord sur le fait que la vie est trop courte." },
+            { id: 86, name: "L'Amour d'une Vieille K7 Audio Rayée", desc: "Vous développez une obsession pour le bruit de fond de la K7." },
+            { id: 87, name: "Le Syndrome de l'Objet Perdu et Retrouvé", desc: "Vous trouvez un stylo que vous aviez perdu en 1999. Vous êtes ému." },
+            { id: 88, name: "La Grande Chute dans un Placard", desc: "Vous tombez dans un placard et atterrissez dans un univers parallèle de chaussettes orphelines." },
+            { id: 89, name: "L'Odyssée du Pli de Chaussette", desc: "Vous essayez de trouver le sens d'un pli de chaussette pendant des heures." },
+            { id: 90, name: "Le Phare du Placard", desc: "Votre placard devient un phare au milieu d'un océan de néant." },
+            
+            // Arc 10 : La Fin Ultime (91-100)
+            { id: 91, name: "Le Syndrome du Maître de la Maison", desc: "Vous sentez que vous êtes la maison. Les murs sont vos os." },
+            { id: 92, name: "La Grosse Conversation avec une Poussière d'Or", desc: "La poussière vous confie ses rêves d'étoile." },
+            { id: 93, name: "L'Amour d'une Grosse Poussière", desc: "Vous développez une obsession pour une grosse poussière de couleur or." },
+            { id: 94, name: "La Grande Fusion des Objets", desc: "Vous fusionnez avec le canapé, la télé, le frigo et le hamster." },
+            { id: 95, name: "Le Phare de l'Univers", desc: "Votre maison devient un phare au milieu d'un océan de néant." },
+            { id: 96, name: "Le Maître du Temps et de l'Espace de la Maison", desc: "Vous pouvez manipuler le temps et l'espace de votre maison." },
+            { id: 97, name: "Le Syndrome de l'Homme Étoile de la Maison", desc: "Vous devenez une étoile dans votre maison." },
+            { id: 98, name: "La Grosse Fusion de l'Univers de la Maison", desc: "Vous fusionnez avec l'univers de votre maison." },
+            { id: 99, name: "La Grosse Conversation avec le Grand Vide de la Maison", desc: "Le vide vous confie ses rêves d'infini." },
+            { id: 100, name: "LA FIN.", desc: "Vous êtes la fin. Vous êtes la seule chose qui existe. Vous êtes l'univers de la maison." }
+        ];
+
+        // --- SAUVEGARDE LOCALE ---
+        // On enregistre les IDs des fins débloquées pour une seule partie.
+        let unlockedEnds = JSON.parse(localStorage.getItem('100fins_séquentielles_partie')) || [];
         document.getElementById('ends-count').innerText = unlockedEnds.length;
 
+        // --- MOTEUR DE JEU (Side-scroller) ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const previewCanvas = document.getElementById('previewCanvas');
         const previewCtx = previewCanvas.getContext('2d');
         
-        let gameState = 'MENU';
+        let gameState = 'MENU'; // MENU, PLAYING, JALON
         let keys = {};
-        let player = { x: 80, y: 60, size: 8, color: '#4CAF50', speed: 1.5 };
+        
+        // Le joueur (vue de côté)
+        let player = { 
+            x: 50, y: 130, // Position initiale au sol
+            width: 20, height: 40, 
+            vx: 0, vy: 0, 
+            speed: 2.5, jumpForce: -7, gravity: 0.4,
+            isJumping: false, facingRight: true,
+            color: '#4CAF50'
+        };
 
+        // Objets interactifs de la maison (plus détaillés pour le side-scrolling)
         const objects = [
-            { id: 'tv', x: 20, y: 10, w: 30, h: 10, color: '#111', interact: () => unlockEnd(1, "Téléphage", "Tu as regardé la télé jusqu'à ce que tes yeux fondent.") },
-            { id: 'canape', x: 20, y: 40, w: 30, h: 15, color: '#8B0000', interact: () => unlockEnd(2, "Grosse Sieste", "Tu t'es endormi sur le canapé et tu n'as jamais voulu te réveiller.") },
-            { id: 'porte', x: 140, y: 50, w: 10, h: 20, color: '#5C4033', interact: () => unlockEnd(3, "L'Extérieur ?", "Tu as essayé de sortir... mais le monde extérieur fait trop peur.") }
+            { id: 'télé', x: 20, y: 130, w: 50, h: 40, color: '#111', 
+              draw: (c) => { 
+                c.fillStyle = '#222'; c.fillRect(20, 130, 50, 40); 
+                c.fillStyle = unlockedEnds.length > 0 ? '#444' : '#111'; // Écran s'assombrit
+                c.fillRect(25, 135, 40, 25);
+              },
+              interact: () => logicThroughEnds([1, 2, 4, 5, 6, 7, 8, 10]) // Les fins liées à la télé
+            },
+            { id: 'canapé', x: 100, y: 140, w: 80, h: 30, color: '#8B0000', 
+              draw: (c) => { 
+                c.fillStyle = '#6D0000'; c.fillRect(100, 140, 80, 30); 
+                c.fillStyle = '#8B0000'; c.fillRect(105, 145, 70, 15); // Coussin
+              },
+              interact: () => logicThroughEnds([3, 9]) // Les fins liées au canapé
+            },
+            { id: 'frigo', x: 200, y: 120, w: 40, h: 50, color: '#FFF', 
+              draw: (c) => { 
+                c.fillStyle = '#EBEBEB'; c.fillRect(200, 120, 40, 50);
+                c.fillStyle = '#333'; c.fillRect(230, 140, 5, 15); // Poignée
+              },
+              interact: () => logicThroughEnds([11, 13, 14, 15, 16, 17, 18, 19, 20]) // Les fins liées à la nourriture
+            },
+            { id: 'grille-pain', x: 250, y: 155, w: 20, h: 15, color: '#AAA', 
+              draw: (c) => { c.fillStyle = '#AAA'; c.fillRect(250, 155, 20, 15); },
+              interact: () => logicThroughEnds([12, 19, 61, 62]) // Fins liées aux petits appareils
+            },
+            { id: 'lit', x: 280, y: 140, w: 90, h: 30, color: '#5C4033', 
+              draw: (c) => { 
+                c.fillStyle = '#5C4033'; c.fillRect(280, 140, 90, 30); // Cadre
+                c.fillStyle = '#80b3ff'; c.fillRect(285, 130, 70, 10); // Couette
+                c.fillStyle = '#FFF'; c.fillRect(285, 120, 30, 10); // Oreiller
+              },
+              interact: () => logicThroughEnds([21, 22, 23, 24, 25, 26, 27, 28, 29, 30]) // Fins liées au sommeil
+            },
+            { id: 'plante', x: 400, y: 150, w: 20, h: 20, color: '#228B22', 
+              draw: (c) => { 
+                c.fillStyle = '#228B22'; c.fillRect(400, 150, 20, 20); // Feuillage
+                c.fillStyle = '#8B4513'; c.fillRect(405, 160, 10, 10); // Pot
+              },
+              interact: () => logicThroughEnds([32, 33, 39]) // Fins liées aux plantes
+            },
+            { id: 'hamster', x: 440, y: 160, w: 10, h: 10, color: '#D2B48C', 
+              draw: (c) => { c.fillStyle = '#D2B48C'; c.fillRect(440, 160, 10, 10); },
+              interact: () => logicThroughEnds([31, 36, 37, 40]) // Fins liées aux animaux
+            },
+            { id: 'bibliothèque', x: 480, y: 100, w: 60, h: 70, color: '#5C4033', 
+              draw: (c) => { 
+                c.fillStyle = '#5C4033'; c.fillRect(480, 100, 60, 70); // Cadre
+                for(let i=0; i<3; i++) {
+                    c.fillStyle = '#333'; c.fillRect(485, 110 + i*20, 50, 2); // Étagères
+                    for(let j=0; j<8; j++) {
+                        c.fillStyle = '#' + (j*11).toString(16) + '4A' + (j*11).toString(16); // Couleurs des livres
+                        c.fillRect(485 + j*6, 112 + i*20, 4, 16);
+                    }
+                }
+              },
+              interact: () => logicThroughEnds([41, 42, 43, 44, 45, 46, 47, 48, 49, 50]) // Fins liées à la lecture
+            },
+            { id: 'douche', x: 600, y: 110, w: 40, h: 60, color: '#FFF', 
+              draw: (c) => { 
+                c.fillStyle = '#EBEBEB'; c.fillRect(600, 110, 40, 60); 
+                c.fillStyle = '#444'; c.fillRect(610, 160, 20, 10); // Bac
+              },
+              interact: () => logicThroughEnds([51, 54, 57, 58, 60]) // Fins liées à la douche
+            },
+            { id: 'miroir', x: 650, y: 110, w: 30, h: 40, color: '#AAA', 
+              draw: (c) => { c.fillStyle = '#AAA'; c.fillRect(650, 110, 30, 40); },
+              interact: () => logicThroughEnds([52, 59]) // Fins liées au miroir
+            },
+            { id: 'toilettes', x: 700, y: 140, w: 30, h: 30, color: '#FFF', 
+              draw: (c) => { c.fillStyle = '#EBEBEB'; c.fillRect(700, 140, 30, 30); },
+              interact: () => logicThroughEnds([55]) // Fins liées aux toilettes
+            },
+            { id: 'micro-ondes', x: 750, y: 155, w: 25, h: 15, color: '#333', 
+              draw: (c) => { c.fillStyle = '#333'; c.fillRect(750, 155, 25, 15); },
+              interact: () => logicThroughEnds([61, 67]) // Fins liées au micro-ondes
+            },
+            { id: 'fenêtre', x: 800, y: 100, w: 60, h: 60, color: '#AAA', 
+              draw: (c) => { 
+                c.fillStyle = '#AAA'; c.fillRect(800, 100, 60, 60); // Cadre
+                c.fillStyle = '#99ccff'; c.fillRect(805, 105, 50, 50); // Verre
+              },
+              interact: () => logicThroughEnds([71, 72, 73, 74, 75, 76, 77, 78, 79, 80]) // Fins liées aux fenêtres
+            },
+            { id: 'placard', x: 900, y: 100, w: 50, h: 70, color: '#5C4033', 
+              draw: (c) => { 
+                c.fillStyle = '#5C4033'; c.fillRect(900, 100, 50, 70); // Cadre
+                c.fillStyle = '#333'; c.fillRect(905, 110, 40, 2); // Étagères
+              },
+              interact: () => logicThroughEnds([81, 82, 83, 84, 85, 86, 87, 88, 89, 90]) // Fins liées aux placards
+            }
         ];
 
-        // --- GESTION TACTILE ---
-        function handleTouch(dir, isPressed) {
-            keys['Arrow' + dir] = isPressed;
+        // --- GESTION DU TACTILE ---
+        function handleTouch(key, isPressed) {
+            keys['Touch' + key] = isPressed;
         }
 
-        // --- CLAVIER ---
+        // --- GESTION DU CLAVIER ---
         window.addEventListener('keydown', e => { keys[e.code] = true; });
         window.addEventListener('keyup', e => { 
             keys[e.code] = false; 
             if(e.code === 'Space' && gameState === 'PLAYING') checkInteraction();
         });
 
-        function unlockEnd(id, name, description) {
-            if (!unlockedEnds.some(e => e.id === id)) {
-                unlockedEnds.push({ id, name, description });
-                localStorage.setItem('100fins_sauvegarde', JSON.stringify(unlockedEnds));
-                document.getElementById('ends-count').innerText = unlockedEnds.length;
+        // --- LOGIQUE SÉQUENTIELLE DES FINS ---
+        // Cette fonction vérifie si une fin spécifique peut être débloquée.
+        // Elle doit être appelée avec une liste d'IDs de fins possibles pour un objet.
+        function logicThroughEnds(possibleEndIDs) {
+            if (gameState !== 'PLAYING') return;
+
+            // On cherche le premier ID dans possibleEndIDs qui n'est pas encore débloqué
+            // ET qui correspond séquentiellement au nombre de fins débloquées + 1.
+            const nextPossibleEnd = unlockedEnds.length + 1;
+            
+            if (possibleEndIDs.includes(nextPossibleEnd)) {
+                unlockMilestone(nextPossibleEnd);
             }
-            document.getElementById('ending-text').innerHTML = `<strong>Fin #${id} : ${name}</strong><br><br>${description}`;
+        }
+
+        function unlockMilestone(id) {
+            const milestone = finMilestonesData.find(m => m.id === id);
+            if (!milestone || unlockedEnds.includes(id)) return;
+
+            unlockedEnds.push(id);
+            localStorage.setItem('100fins_séquentielles_partie', JSON.stringify(unlockedEnds));
+            document.getElementById('ends-count').innerText = unlockedEnds.length;
+
+            // Affichage de la fenêtre (popUp)
+            document.getElementById('ending-text').innerHTML = `<strong>FIN #${milestone.id} : ${milestone.name}</strong>${milestone.desc}`;
             document.getElementById('ending-screen').style.display = 'flex';
-            gameState = 'ENDED';
+            gameState = 'JALON';
+        }
+
+        function closeMilestonePopUp() {
+            document.getElementById('ending-screen').style.display = 'none';
+            // Si on est à la 100ème fin, le jeu est terminé, on revient au menu.
+            if (unlockedEnds.length === 100) {
+                returnToMenu();
+                // On efface la sauvegarde pour une nouvelle chance
+                localStorage.removeItem('100fins_séquentielles_partie');
+                unlockedEnds = [];
+                document.getElementById('ends-count').innerText = "0";
+            } else {
+                gameState = 'PLAYING';
+            }
         }
 
         function checkInteraction() {
-            if (gameState !== 'PLAYING') return;
-            const pCenter = { x: player.x + player.size/2, y: player.y + player.size/2 };
+            // Zone d'interaction (un peu plus large que le joueur)
+            const pRect = { x: player.x, y: player.y, w: player.width, h: player.height };
             for(let obj of objects) {
-                if (pCenter.x > obj.x - 12 && pCenter.x < obj.x + obj.w + 12 &&
-                    pCenter.y > obj.y - 12 && pCenter.y < obj.y + obj.h + 12) {
+                if (pRect.x + pRect.w > obj.x - 10 && pRect.x < obj.x + obj.w + 10 &&
+                    pRect.y + pRect.h > obj.y - 10 && pRect.y < obj.y + obj.h + 10) {
                     obj.interact();
                     break;
                 }
             }
         }
 
+        // --- MISE À JOUR (Side-scroller) ---
         function update() {
             if (gameState !== 'PLAYING') return;
-            if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
-            if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
-            if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
-            if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
+
+            // Déplacement Horizontal
+            if (keys['ArrowLeft'] || keys['KeyA'] || keys['TouchLeft']) {
+                player.vx = -player.speed;
+                player.facingRight = false;
+            } else if (keys['ArrowRight'] || keys['KeyD'] || keys['TouchRight']) {
+                player.vx = player.speed;
+                player.facingRight = true;
+            } else {
+                player.vx = 0;
+            }
+
+            // Saut
+            if ((keys['ArrowUp'] || keys['KeyW'] || keys['KeySpace'] || keys['TouchAction']) && !player.isJumping) {
+                player.vy = player.jumpForce;
+                player.isJumping = true;
+            }
+
+            // Application de la gravité
+            player.vy += player.gravity;
+
+            // Mise à jour de la position
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Collisions avec le sol (y=130)
+            if (player.y >= 130) {
+                player.y = 130;
+                player.vy = 0;
+                player.isJumping = false;
+            }
 
             // Limites des murs
-            player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
-            player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+            player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
         }
 
-        function draw(context) {
-            context.fillStyle = '#8B5A2B';
-            context.fillRect(0,0, canvas.width, canvas.height);
-            for(let obj of objects) {
-                context.fillStyle = obj.color;
-                context.fillRect(obj.x, obj.y, obj.w, obj.h);
+        // --- DESSIN (Side-scroller) ---
+        function draw(context, canvasObj) {
+            // Arrière-plan (un mur de briques simples)
+            context.fillStyle = '#2a2a2a';
+            context.fillRect(0, 0, canvasObj.width, canvasObj.height);
+            for(let i=0; i<32; i++){
+                for(let j=0; j<18; j++){
+                    context.fillStyle = (i+j)%2===0 ? '#333' : '#2a2a2a';
+                    context.fillRect(i*10, j*10, 10, 10);
+                }
             }
+
+            // Sol
+            context.fillStyle = '#8B5A2B';
+            context.fillRect(0, 170, canvasObj.width, 10);
+
+            // Dessiner les objets (chacun se dessine lui-même pour plus de détail)
+            for(let obj of objects) {
+                obj.draw(context);
+            }
+
+            // Dessiner le joueur
             context.fillStyle = player.color;
-            context.fillRect(player.x, player.y, player.size, player.size);
+            context.fillRect(player.x, player.y, player.width, player.height);
+            // Yeux (pour l'orientation)
+            context.fillStyle = 'white';
+            const eyeX = player.facingRight ? player.x + 12 : player.x + 4;
+            context.fillRect(eyeX, player.y + 10, 4, 4);
+
+            // Indication d'interaction
+            if (gameState === 'PLAYING') {
+                const pRect = { x: player.x, y: player.y, w: player.width, h: player.height };
+                for(let obj of objects) {
+                    if (pRect.x + pRect.w > obj.x - 10 && pRect.x < obj.x + obj.w + 10 &&
+                        pRect.y + pRect.h > obj.y - 10 && pRect.y < obj.y + obj.h + 10) {
+                        context.fillStyle = 'white';
+                        context.font = '12px Courier';
+                        const text = ('ontouchstart' in window) ? '[ACTION]' : '[ESPACE]';
+                        context.fillText(text, player.x - 10, player.y - 10);
+                    }
+                }
+            }
         }
 
+        // --- BOUCLE PRINCIPALE ---
         function loop() {
             update();
-            if (gameState === 'PLAYING') draw(ctx);
-            else if (gameState === 'MENU') draw(previewCtx);
+            if (gameState === 'PLAYING') {
+                draw(ctx, canvas);
+            } else if (gameState === 'MENU') {
+                draw(previewCtx, previewCanvas);
+            }
             requestAnimationFrame(loop);
         }
 
+        // --- NAVIGATION UI ---
         function startGame() {
+            if (unlockedEnds.length > 0) {
+                // Si une partie est déjà en cours
+                if (!confirm("Une partie est déjà en cours. Voulez-vous recommencer et perdre vos fins débloquées ?")) {
+                    returnToPlaying();
+                    return;
+                }
+            }
+            // Nouvelle partie
+            localStorage.removeItem('100fins_séquentielles_partie');
+            unlockedEnds = [];
+            document.getElementById('ends-count').innerText = "0";
+            returnToPlaying();
+        }
+
+        function returnToPlaying() {
             document.getElementById('menu').style.display = 'none';
+            document.getElementById('milestones-panel').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
+            player.x = 50; player.y = 130; // Reset position
             gameState = 'PLAYING';
         }
 
         function returnToMenu() {
-            document.getElementById('ending-screen').style.display = 'none';
             document.getElementById('game-container').style.display = 'none';
+            document.getElementById('ending-screen').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             gameState = 'MENU';
         }
 
-        function showEndsList() {
+        function showMilestones() {
             document.getElementById('menu').style.display = 'none';
-            document.getElementById('ends-list-container').style.display = 'block';
-            const ul = document.getElementById('ends-ul');
+            document.getElementById('milestones-panel').style.display = 'block';
+            const ul = document.getElementById('milestones-ul');
             ul.innerHTML = '';
+            
+            // Génère la liste des 100 fins séquentielles
             for (let i = 1; i <= 100; i++) {
                 let li = document.createElement('li');
-                let found = unlockedEnds.find(e => e.id === i);
-                li.innerHTML = found ? `<strong style="color:#4CAF50">#${i} ${found.name}</strong>` : `<span style="color:#555">#${i} ???</span>`;
+                let milestone = finMilestonesData.find(m => m.id === i);
+                
+                if (unlockedEnds.includes(i)) {
+                    li.innerHTML = `<strong>#${milestone.id} ${milestone.name}</strong> - ${milestone.desc}`;
+                } else {
+                    li.className = 'locked';
+                    li.innerHTML = `<strong>#${milestone.id} ???</strong> - Obtenable en jouant séquentiellement.`;
+                }
                 ul.appendChild(li);
             }
         }
 
         function returnToMenuFromList() {
-            document.getElementById('ends-list-container').style.display = 'none';
+            document.getElementById('milestones-panel').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
         }
 
-        // Détection tactile pour afficher l'UI mobile
+        // --- INITIALISATION ---
+        // Détection tactile pour afficher les contrôles mobiles
         if ('ontouchstart' in window) {
-            document.getElementById('touchUI').style.display = 'flex';
+            document.getElementById('touch-controls').style.display = 'flex';
         }
 
+        // Lancer la boucle
         loop();
     </script>
 </body>
